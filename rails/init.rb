@@ -1,4 +1,5 @@
 require 'awesome_nested_set/compatability'
+require 'awesome_nested_set/parent_column_centric'
 require 'awesome_nested_set'
 
 ActiveRecord::Base.class_eval do

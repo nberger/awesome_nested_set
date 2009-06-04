@@ -57,6 +57,7 @@ module CollectiveIdea #:nodoc:
             :left_column => 'lft',
             :right_column => 'rgt',
             :dependent => :delete_all, # or :destroy
+            :strict => true, # if false, user can set parent_column
           }.merge(options)
           
           if options[:scope].is_a?(Symbol) && options[:scope].to_s !~ /_id$/
@@ -77,14 +78,15 @@ module CollectiveIdea #:nodoc:
           
             # no bulk assignment
             attr_protected  left_column_name.intern,
-                            right_column_name.intern, 
-                            parent_column_name.intern
+                            right_column_name.intern
+            attr_protected  parent_column_name.intern if options[:strict]
                           
             before_create :set_default_left_and_right
             before_destroy :destroy_descendants
                           
             # no assignment to structure fields
             [left_column_name, right_column_name, parent_column_name].each do |column|
+              next if !options[:strict] && column == parent_column_name
               module_eval <<-"end_eval", __FILE__, __LINE__
                 def #{column}=(x)
                   raise ActiveRecord::ActiveRecordError, "Unauthorized assignment to #{column}: it's an internal field handled by acts_as_nested_set code, use move_to_* methods instead."
@@ -96,6 +98,10 @@ module CollectiveIdea #:nodoc:
             named_scope :leaves, :conditions => "#{quoted_right_column_name} - #{quoted_left_column_name} = 1", :order => quoted_left_column_name
 
             define_callbacks("before_move", "after_move") if self.respond_to?(:define_callbacks)
+
+            unless options[:strict]
+              include ParentColumnCentric
+            end
           end
           
         end

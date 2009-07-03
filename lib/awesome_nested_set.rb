@@ -549,9 +549,23 @@ module CollectiveIdea #:nodoc:
           self.reload_nested_set
           callback(:after_move)
         end
-
-      end
-      
+        def move_to_with_validation(target, position)
+          return nil if self.respond_to?(:validate_move_to) and not send(:validate_move_to, target, position)          
+          move_to_without_validation(target, position)          
+        rescue ActiveRecord::ActiveRecordError => e
+          errors.add_to_base(e.message)
+          return nil
+        end
+        
+        alias_method_chain :move_to, :validation
+        
+        def move_to_with_validation!(target, position)
+          raise (errors.first && errors.first.to_s) || "Failed to move node" unless move_to_with_validation(target, position)
+        end
+        
+        # always call the ! method, being that move_to is already throwing exceptions
+        alias_method :move_to_with_validation, :move_to_with_validation!
+      end      
     end
   end
 end
